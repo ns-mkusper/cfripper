@@ -7,6 +7,10 @@
 
 Lambda function to "rip apart" a CloudFormation template and check it for security compliance.
 
+To build the lambda function:
+
+`pipenv run make lambda.zip`
+
 ## Sample pipeline with CFripper
 
 CFripper is a Python tool that aims to prevent vulnerabilities from getting to production infrastructure through vulnerable CloudFormation scripts. As with the other security tools that we use at Skyscanner, CFripper is part of the CI/CD pipeline. It runs just before a CloudFormation stack is deployed or updated and if the CloudFormation script fails to pass the security check it fails the deployment and notifies the team that owns the stack. This is an example of how you might set up CFripper as an AWS Lambda:
