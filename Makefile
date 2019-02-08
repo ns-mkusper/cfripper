@@ -30,12 +30,12 @@ test: lint component
 freeze:
 	pip-compile --output-file requirements.txt setup.py
 
-lambda.zip: $(SOURCES) Makefile requirements.txt
-	if [ -f lambda.zip ]; then rm lambda.zip; fi
+lambda_cfripper.zip: $(SOURCES) Makefile requirements.txt
+	if [ -f infra/lambda_cfripper.zip ]; then rm infra/lambda_cfripper.zip; fi
 	if [ -d "./package" ]; then rm -rf package/; fi
 	pip install -t package -r requirements.txt
 	cp -r cfripper package/cfripper
-	cd ./package && zip -rq ../lambda.zip .
+	cd ./package && zip -rq ../infra/lambda_cfripper.zip .
 	rm -rf ./package
 
 .PHONY: install install-dev lint component coverage test freeze

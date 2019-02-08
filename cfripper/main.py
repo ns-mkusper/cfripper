@@ -24,43 +24,76 @@ from cfripper.config.logger import get_logger
 logger = get_logger()
 
 
-def log_results(project_name, service_name, stack_name, rules, _type, warnings, template_url):
-    logger.info("{}: project - {}, service- {}, stack - {}. {} {} URL: {}".format(
-        _type,
-        project_name,
-        service_name,
-        stack_name,
-        json.dumps(rules),
-        str(warnings),
-        template_url,
-    ))
+def log_results(project_name, service_name, stack_name, rules, _type, warnings,
+                template_url):
+    logger.info(
+        "{}: project - {}, service- {}, stack - {}. {} {} URL: {}".format(
+            _type,
+            project_name,
+            service_name,
+            stack_name,
+            json.dumps(rules),
+            str(warnings),
+            template_url,
+        ))
 
 
 def handler(event, context):
     """
     Main entry point of the Lambda function.
 
-    :param event: {
-        "stack_template_url": String
+    :param event:
+    Request JSON format for proxy integration
+    {
+    	"resource": "Resource path",
+    	"path": "Path parameter",
+    	"httpMethod": "Incoming request's method name"
+    	"headers": {Incoming request headers}
+    	"queryStringParameters": {"stack_template_url": String }
+    	"pathParameters":  {path parameters}
+    	"stageVariables": {Applicable stage variables}
+    	"requestContext": {Request context, including authorizer-returned key-value pairs}
+    	"body": "A JSON string of the request payload."
+    	"isBase64Encoded": "A boolean flag to indicate if the applicable request payload is Base64-encode"
     }
     :param context:
     :return:
+    Response JSON format
+    {
+    	"isBase64Encoded": true|false,
+    	"statusCode": httpStatusCode,
+    	"headers": { "headerName": "headerValue", ... },
+    	"body": "..."
+    }
+
     """
-    if not event.get("stack_template_url"):
-        raise ValueError("Invalid event type: no parameter 'stack_template_url' in request.")
+
+    print(event)
+    qp = event.get("queryStringParameters")
+    if not qp.get("stack_template_url"):
+        raise ValueError(
+            "Invalid event type: no parameter 'stack_template_url' in request."
+        )
 
     result = Result()
 
     s3 = S3Adapter()
-    template = s3.download_template_to_dictionary(event["stack_template_url"])
+    template = s3.download_template_to_dictionary(qp["stack_template_url"])
     if not template:
         # In case of an ivalid script log a warning and return early
-        result.add_exception(TypeError("Malformated CF script: {}".format(event["stack_template_url"])))
+        result.add_exception(
+            TypeError("Malformated CF script: {}".format(
+                qp["stack_template_url"])))
         return {
-            "valid": "true",
-            "reason": '',
-            "failed_rules": [],
-            "exceptions": [x.args[0] for x in result.exceptions],
+            "isBase64Encoded": False,
+            "statusCode": 400,
+            "headers": {},
+            "body": {
+                "valid": "false",
+                "reason": '',
+                "failed_rules": [],
+                "exceptions": [x.args[0] for x in result.exceptions],
+            }
         }
 
     # Process Rules
@@ -92,7 +125,7 @@ def handler(event, context):
             config.stack_name,
             result.failed_rules,
             result.warnings,
-            event["stack_template_url"],
+            qp["stack_template_url"],
         )
         logger.info("FAIL: {}; {}; {}".format(
             config.project_name,
@@ -113,12 +146,34 @@ def handler(event, context):
             config.stack_name,
             result.failed_monitored_rules,
             result.warnings,
-            event["stack_template_url"],
+            qp["stack_template_url"],
         )
+    # TODO base64 encode and implement more error code responses
+    if actionResults:
+        if 'CLIENT_ERROR' in actionResults:
+            return {
+                "isBase64Encoded": False,
+                "statusCode": 400,
+                "headers": {},
+                "body": str(actionResults)
+            }
+        else:
+
     return {
-        "valid": str(result.valid).lower(),
-        "reason": ",".join(["{}-{}".format(r["rule"], r["reason"]) for r in result.failed_rules]),
-        "failed_rules": result.failed_rules,
-        "exceptions": [x.args[0] for x in result.exceptions],
-        "warnings": result.failed_monitored_rules,
-    }
+                "isBase64Encoded": False,
+                "statusCode": 200,
+                "headers": {},
+                "body": {
+                    "valid":
+                    str(result.valid).lower(),
+                    "reason":
+                    ",".join([
+                        "{}-{}".format(r["rule"], r["reason"]) for r in result.failed_rules
+                    ]),
+                    "failed_rules":
+                    result.failed_rules,
+                    "exceptions": [x.args[0] for x in result.exceptions],
+                    "warnings":
+                    result.failed_monitored_rules,
+                }
+        }

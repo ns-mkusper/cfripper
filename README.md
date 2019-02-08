@@ -9,7 +9,7 @@ Lambda function to "rip apart" a CloudFormation template and check it for securi
 
 To build the lambda function:
 
-`pipenv run make lambda.zip`
+`pipenv --python 3.7 run make lambda_cfripper.zip`
 
 ## Sample pipeline with CFripper
 
