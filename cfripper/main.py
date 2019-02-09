@@ -85,15 +85,18 @@ def handler(event, context):
             TypeError("Malformated CF script: {}".format(
                 qp["stack_template_url"])))
         return {
-            "isBase64Encoded": False,
-            "statusCode": 400,
+            "isBase64Encoded":
+            False,
+            "statusCode":
+            400,
             "headers": {},
-            "body": {
+            "body":
+            str({
                 "valid": "false",
                 "reason": '',
                 "failed_rules": [],
                 "exceptions": [x.args[0] for x in result.exceptions],
-            }
+            })
         }
 
     # Process Rules
@@ -149,31 +152,25 @@ def handler(event, context):
             qp["stack_template_url"],
         )
     # TODO base64 encode and implement more error code responses
-    if actionResults:
-        if 'CLIENT_ERROR' in actionResults:
-            return {
-                "isBase64Encoded": False,
-                "statusCode": 400,
-                "headers": {},
-                "body": str(actionResults)
-            }
-        else:
-
     return {
-                "isBase64Encoded": False,
-                "statusCode": 200,
-                "headers": {},
-                "body": {
-                    "valid":
-                    str(result.valid).lower(),
-                    "reason":
-                    ",".join([
-                        "{}-{}".format(r["rule"], r["reason"]) for r in result.failed_rules
-                    ]),
-                    "failed_rules":
-                    result.failed_rules,
-                    "exceptions": [x.args[0] for x in result.exceptions],
-                    "warnings":
-                    result.failed_monitored_rules,
-                }
-        }
+        "isBase64Encoded":
+        False,
+        "statusCode":
+        200,
+        "headers": {},
+        "body":
+        str({
+            "valid":
+            str(result.valid).lower(),
+            "reason":
+            ",".join([
+                "{}-{}".format(r["rule"], r["reason"])
+                for r in result.failed_rules
+            ]),
+            "failed_rules":
+            result.failed_rules,
+            "exceptions": [x.args[0] for x in result.exceptions],
+            "warnings":
+            result.failed_monitored_rules,
+        })
+    }
