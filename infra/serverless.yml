@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CFRipper Cloudformation Template Scanner Serverless Deployment
+
+Resources:
+  CfRipperLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.7
+      Handler: cfripper.main.handler
+      CodeUri: ./lambda_cfripper.zip
+      Policies:
+        - AWSLambdaExecute # Managed Policy
+        - Version: '2012-10-17' # Policy Document
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:GetObjectACL
+              Resource: 'arn:aws:s3:::*/*'
+            - Effect: Allow
+              Action:
+                - cloudformation:*
+              Resource: '*'
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /cfripper_scan
+            Method: get
